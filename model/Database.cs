@@ -405,11 +405,12 @@ from #ScriptedRoles
 	    private void LoadCLRRoutines(SqlCommand cm) {
 	        cm.CommandText = @"
 select 
-	ob.name
+	ob.object_id
+,	ob.name
 ,	sc.name as schema_name
 ,	ob.type
 ,	ob.type_desc
-,	ass.assembly_name
+,	ass.name as assembly_name
 ,	am.assembly_class
 ,	am.assembly_method
 ,	am.execute_as_principal_id
@@ -419,6 +420,7 @@ select
 		when execute_as_principal_id IS NULL then 'CALLER' 
 		else pr.name 
 	END as execute_as
+,	params.parameter_string
 from sys.objects ob
 inner join sys.schemas sc
 	on ob.schema_id = sc.schema_id
@@ -428,6 +430,18 @@ inner join sys.assemblies ass
 	on ass.assembly_id = am.assembly_id
 left outer join sys.database_principals pr
 	on pr.principal_id = am.execute_as_principal_id
+outer apply (
+	SELECT 
+	  STUFF((
+		SELECT ', ' + [Parameter_Name] + ' ' + Data_type + case when character_maximum_length is not null then '(' + cast(character_maximum_length as nvarchar) + ')' else '' end
+		FROM INFORMATION_SCHEMA.parameters
+		WHERE (SPECIFIC_NAME = Results.SPECIFIC_NAME) 
+		FOR XML PATH(''),TYPE).value('(./text())[1]','VARCHAR(MAX)')
+	  ,1,2,'') AS parameter_string
+	FROM INFORMATION_SCHEMA.parameters Results
+	where SPECIFIC_NAME = ob.name
+	GROUP BY SPECIFIC_NAME
+) params
 ";
 	        using (var dr = cm.ExecuteReader()) {
 	            while (dr.Read()) {
