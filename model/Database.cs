@@ -73,6 +73,7 @@ namespace SchemaZen.model {
         public List<Role> Roles = new List<Role>();
         public List<SqlUser> Users = new List<SqlUser>();
 		public List<Constraint> ViewIndexes = new List<Constraint>();
+		public List<CLRRoutine> CLRRoutines = new List<CLRRoutine>();
 
 		public DbProp FindProp(string name) {
 			return Props.FirstOrDefault(p => string.Equals(p.Name, name, StringComparison.CurrentCultureIgnoreCase));
@@ -150,6 +151,7 @@ namespace SchemaZen.model {
 			Users.Clear();
 			Synonyms.Clear();
             Roles.Clear();
+            CLRRoutines.Clear();
 
 			using (var cn = new SqlConnection(Connection)) {
 				cn.Open();
@@ -167,7 +169,8 @@ namespace SchemaZen.model {
 					LoadRoutines(cm);
 					LoadXmlSchemas(cm);
 					LoadCLRAssemblies(cm);
-					LoadUsersAndLogins(cm);
+				    LoadCLRRoutines(cm);
+                    LoadUsersAndLogins(cm);
 					LoadSynonyms(cm);
                     LoadRoles(cm);
                 }
@@ -399,7 +402,59 @@ from #ScriptedRoles
 			}
 		}
 
-		private void LoadRoutines(SqlCommand cm) {
+	    private void LoadCLRRoutines(SqlCommand cm) {
+	        cm.CommandText = @"
+select 
+	ob.name
+,	sc.name as schema_name
+,	ob.type
+,	ob.type_desc
+,	ass.assembly_name
+,	am.assembly_class
+,	am.assembly_method
+,	am.execute_as_principal_id
+,	case
+		when execute_as_principal_id = -2 then 'OWNER' 
+		when execute_as_principal_id = 1 then 'SELF' 
+		when execute_as_principal_id IS NULL then 'CALLER' 
+		else pr.name 
+	END as execute_as
+from sys.objects ob
+inner join sys.schemas sc
+	on ob.schema_id = sc.schema_id
+inner join sys.assembly_modules am
+	on ob.object_id = am.object_id
+inner join sys.assemblies ass
+	on ass.assembly_id = am.assembly_id
+left outer join sys.database_principals pr
+	on pr.principal_id = am.execute_as_principal_id
+";
+	        using (var dr = cm.ExecuteReader()) {
+	            while (dr.Read()) {
+	                var routine = new CLRRoutine();
+	                routine.Name = (string) dr["name"];
+                    routine.Schema = (string) dr["schema_name"];
+                    routine.AssemblyName = (string) dr["assembly_name"];
+                    routine.AssemblyClass = (string) dr["assembly_class"];
+                    routine.AssemblyMethod = (string) dr["assembly_method"];
+                    routine.ExecuteAs = (string)dr["execute_as"];
+
+	                switch ((string) dr["type_desc"]) {
+                        case "CLR_TABLE_VALUED_FUNCTION":
+                            routine.RoutineType = CLRRoutine.CLRRoutineKind.TableValuedFunction;
+	                        break;
+                        case "CLR_SCALAR_FUNCTION":
+                            routine.RoutineType = CLRRoutine.CLRRoutineKind.ScalarFunction;
+                            break;
+                        case "CLR_STORED_PROCEDURE":
+                            routine.RoutineType = CLRRoutine.CLRRoutineKind.Procedure;
+                            break;
+                    }
+                }
+	        }
+	    }
+
+        private void LoadRoutines(SqlCommand cm) {
 			//get routines
 			cm.CommandText = @"
 					select

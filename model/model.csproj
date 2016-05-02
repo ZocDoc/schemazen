@@ -52,6 +52,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="CLRRoutine.cs" />
     <Compile Include="Assembly.cs" />
     <Compile Include="BatchSqlParser.cs" />
     <Compile Include="Column.cs" />
