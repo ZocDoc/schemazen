@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.Diagnostics;
 using ManyConsole;
@@ -45,7 +46,9 @@ namespace SchemaZen.console {
         protected string DatabaseFilesPath { get; set; }
 
 
-	    protected Database CreateDatabase() {
+	    protected Database CreateDatabase(IList<string> filteredTypes = null) {
+	        filteredTypes = filteredTypes ?? new List<string>();
+
 			if (!string.IsNullOrEmpty(ConnectionString)) {
 				if (!string.IsNullOrEmpty(Server) ||
 			        !string.IsNullOrEmpty(DbName) ||
@@ -53,7 +56,7 @@ namespace SchemaZen.console {
 					!string.IsNullOrEmpty(Pass)) {
 					throw new ConsoleHelpAsException("You must not provide both a connection string and a server/db/user/password");
 				}
-				return new Database {
+				return new Database(filteredTypes) {
 					Connection = ConnectionString,
 					Dir = ScriptDir
 				};
@@ -71,7 +74,8 @@ namespace SchemaZen.console {
 				builder.UserID = User;
 				builder.Password = Pass;
 			}
-			return new Database {
+			return new Database(filteredTypes)
+            {
 				Connection = builder.ToString(),
 				Dir = ScriptDir
 			};
