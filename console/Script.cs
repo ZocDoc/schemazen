@@ -81,13 +81,17 @@ namespace SchemaZen.console {
         private List<string> HandleFilteredTypes() {
             var filteredTypes = FilterTypes == null ? new List<string>() : FilterTypes.Split(',').ToList();
 
+            var anyInvalidType = false;
             foreach (var filterType in filteredTypes) {
                 if (!Database.Dirs.Contains(filterType)) {
                     Log(TraceLevel.Warning, string.Format("{0} is not a valid type.", filterType));
-                    Log(TraceLevel.Warning, string.Format("Valid types: {0}", Database.ValidTypes));
+                    anyInvalidType = true;
                 }
             }
 
+            if (anyInvalidType) {
+                    Log(TraceLevel.Warning, string.Format("Valid types: {0}", Database.ValidTypes));
+            }
 
             return filteredTypes;
         }
