@@ -1,34 +1,43 @@
 ﻿using System.Collections.Generic;
+using System.Data.SqlClient;
 using System.Linq;
-using System.Runtime.Remoting.Metadata.W3cXsd2001;
 
 namespace SchemaZen.model {
-	public class SqlAssembly : INameable, IScriptable {
-		public List<KeyValuePair<string, byte[]>> Files = new List<KeyValuePair<string, byte[]>>();
-		public string Name { get; set; }
-		public string PermissionSet;
+    public class Assembly : DatabaseComponentBase<SqlAssembly> {
+        public override string Name {
+            get { return "assemblies"; }
+        }
 
-		public SqlAssembly(string permissionSet, string name) {
-			PermissionSet = permissionSet;
-			Name = name;
 
-			if (PermissionSet == "SAFE_ACCESS")
-				PermissionSet = "SAFE";
-		}
+        public override List<SqlAssembly> Load(SqlCommand cm) {
+            var assemblies = new List<SqlAssembly>();
 
-		public string ScriptCreate() {
-			var commands =
-				Files.Select(
-					(kvp, index) =>
-						string.Format("{0} ASSEMBLY [{1}]\r\n{2}FROM {3}\r\n{4}", index == 0 ? "CREATE" : "ALTER", Name,
-							index == 0 ? string.Empty : "ADD FILE ", "0x" + new SoapHexBinary(kvp.Value).ToString(),
-							index == 0 ? "WITH PERMISSION_SET = " + PermissionSet : string.Format("AS N'{0}'", kvp.Key)));
-			var script = string.Join("\r\nGO\r\n", commands.ToArray());
-			return script;
-		}
+            try {
+                // get CLR assemblies
+                cm.CommandText =
+                    @"select a.name as AssemblyName, a.permission_set_desc, af.name as FileName, af.content
+						from sys.assemblies a
+						inner join sys.assembly_files af on a.assembly_id = af.assembly_id 
+						where a.is_user_defined = 1
+						order by a.name, af.file_id";
+                SqlAssembly a = null;
+                using (var dr = cm.ExecuteReader()) {
+                    while (dr.Read()) {
+                        if (a == null || a.Name != (string) dr["AssemblyName"])
+                            a = new SqlAssembly((string) dr["permission_set_desc"], (string) dr["AssemblyName"]);
+                        a.Files.Add(new KeyValuePair<string, byte[]>((string) dr["FileName"], (byte[]) dr["content"]));
+                        if (!assemblies.Contains(a))
+                            assemblies.Add(a);
+                    }
+                }
+            } catch (SqlException) {
+                // SQL server version doesn't support CLR assemblies, nothing to do here
+            }
+            return assemblies;
+        }
 
-		public string ScriptDrop() {
-			return string.Format("DROP {0} [{1}]", "ASSEMBLY", Name);
-		}
-	}
+        public SqlAssembly FindAssembly(List<SqlAssembly> assemblies, string name) {
+            return assemblies.FirstOrDefault(a => a.Name == name);
+        }
+    }
 }
