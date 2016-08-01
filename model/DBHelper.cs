@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Data.SqlClient;
 using System.IO;
-using Microsoft.SqlServer.Management.Common;
-using Microsoft.SqlServer.Management.Smo;
 using SchemaZen.Library.Models;
 
 namespace SchemaZen.Library {
