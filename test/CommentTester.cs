@@ -27,6 +27,12 @@ CREATE TABLE [dbo].[TestTable1] (
 
 ";
 
+        private const string SetUpTable2Script = @"
+CREATE TABLE [dbo].[TestTable2] (
+ID int
+)
+";
+
         private const string SetupTableTypeScript = @"
 CREATE TYPE [dbo].[TestTableType] AS TABLE(
 	[ID] [nvarchar](250) NULL,
@@ -137,19 +143,10 @@ SELECT * FROM [dbo].[testTable0]
                 directory + fileName, Database.AutoGenerateComment));
         }
 
-        [TestCase("\\table_types\\", "TYPE_TestTableType.sql")]
-        [TestCase("\\foreign_keys\\", "TestTable0.sql")]
-        [TestCase("\\functions\\", "TestFunc.sql")]
-        [TestCase("\\procedures\\", "TestProc.sql")]
-        [TestCase("\\roles\\", "TestRole.sql")]
-        [TestCase("\\triggers\\", "TestTrigger.sql")]
-        [TestCase("\\tables\\", "TestTable0.sql")]
-        [TestCase("\\users\\", "TestUser.sql")]
-        [TestCase("\\views\\", "TestView.sql")]
-        [TestCase("\\", "schemas.sql")]
-        public void TestSqlSyntaxIsValid(string directory, string fileName) {
-            DBHelper.RunSqlWithNoExec(_db.Connection, File.ReadAllText(_db.Name +
-                directory + fileName));
+        [Test]
+        public void TestScriptIsValidWithComment() {
+            var scriptWithComment = Database.AutoGenerateComment + SetUpTable2Script;
+            DBHelper.ExecBatchSql(_db.Connection, scriptWithComment);
         }
 
         [TearDown]

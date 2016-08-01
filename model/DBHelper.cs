@@ -41,15 +41,6 @@ namespace SchemaZen.Library {
 			}
 		}
 
-	    public static void RunSqlWithNoExec(string conn, string sql) {
-            var sqlConnection = new SqlConnection(conn);
-            var svrConnection = new ServerConnection(sqlConnection);
-            var server = new Server(svrConnection);
-	        server.ConnectionContext.ExecuteNonQuery("SET NOEXEC ON;");
-            server.ConnectionContext.ExecuteNonQuery(sql);
-            server.ConnectionContext.ExecuteNonQuery("SET NOEXEC OFF;");
-        }
-
         public static void DropDb(string conn) {
 			var cnBuilder = new SqlConnectionStringBuilder(conn);
 			var initialCatalog = cnBuilder.InitialCatalog;
