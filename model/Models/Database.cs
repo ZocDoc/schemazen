@@ -7,8 +7,6 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
-using System.Xml.Schema;
-using Microsoft.SqlServer.Server;
 
 namespace SchemaZen.Library.Models {
 	public class Database {
