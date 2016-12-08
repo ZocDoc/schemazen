@@ -1420,43 +1420,48 @@ where name = @dbname
 			log(TraceLevel.Info, string.Format("Data imported successfully for {0}", DatabaseName));
 		}
 
-		public void CreateFromDir(bool overwrite, string databaseFilesPath = null, Action<TraceLevel, string> log = null) {
+        static readonly object _createDatabaseLock = new object();
+
+        public void CreateFromDir(bool overwrite, string databaseFilesPath = null, Action<TraceLevel, string> log = null) {
 			if (log == null) log = (tl, s) => { };
 
-			if (DBHelper.DbExists(Connection)) {
-				log(TraceLevel.Verbose, string.Format("Dropping existing database for {0}", DatabaseName));
-				DBHelper.DropDb(Connection);
-				log(TraceLevel.Verbose, string.Format("Existing database dropped for {0}", DatabaseName));
-			}
+		    lock (_createDatabaseLock) {
 
-			log(TraceLevel.Info, string.Format("Creating database {0}", DatabaseName));
-			//create database
-			DBHelper.CreateDb(Connection, databaseFilesPath);
+		        if (DBHelper.DbExists(Connection)) {
+		            log(TraceLevel.Verbose, string.Format("Dropping existing database for {0}", DatabaseName));
+		            DBHelper.DropDb(Connection);
+		            log(TraceLevel.Verbose, string.Format("Existing database dropped for {0}", DatabaseName));
+		        }
 
-			//run scripts
-			if (File.Exists(Dir + "/props.sql")) {
-				log(TraceLevel.Verbose, string.Format("Setting database properties {0}", DatabaseName));
-				try {
-					DBHelper.ExecBatchSql(Connection, File.ReadAllText(Dir + "/props.sql"));
-				} catch (SqlBatchException ex) {
-					throw new SqlFileException(Dir + "/props.sql", ex);
-				}
+		        log(TraceLevel.Info, string.Format("Creating database {0}", DatabaseName));
+		        //create database
+		        DBHelper.CreateDb(Connection, databaseFilesPath);
 
-				// COLLATE can cause connection to be reset
-				// so clear the pool so we get a new connection
-				DBHelper.ClearPool(Connection);
-			}
+		        //run scripts
+		        if (File.Exists(Dir + "/props.sql")) {
+		            log(TraceLevel.Verbose, string.Format("Setting database properties {0}", DatabaseName));
+		            try {
+		                DBHelper.ExecBatchSql(Connection, File.ReadAllText(Dir + "/props.sql"));
+		            } catch (SqlBatchException ex) {
+		                throw new SqlFileException(Dir + "/props.sql", ex);
+		            }
 
-			if (File.Exists(Dir + "/schemas.sql")) {
-				log(TraceLevel.Verbose, string.Format("Creating database schemas for {0}", DatabaseName));
-				try {
-					DBHelper.ExecBatchSql(Connection, File.ReadAllText(Dir + "/schemas.sql"));
-				} catch (SqlBatchException ex) {
-					throw new SqlFileException(Dir + "/schemas.sql", ex);
-				}
-			}
+		            // COLLATE can cause connection to be reset
+		            // so clear the pool so we get a new connection
+		            DBHelper.ClearPool(Connection);
+		        }
 
-			log(TraceLevel.Info, string.Format("Creating database objects for {0}", DatabaseName));
+		        if (File.Exists(Dir + "/schemas.sql")) {
+		            log(TraceLevel.Verbose, string.Format("Creating database schemas for {0}", DatabaseName));
+		            try {
+		                DBHelper.ExecBatchSql(Connection, File.ReadAllText(Dir + "/schemas.sql"));
+		            } catch (SqlBatchException ex) {
+		                throw new SqlFileException(Dir + "/schemas.sql", ex);
+		            }
+		        }
+		    }
+
+		    log(TraceLevel.Info, string.Format("Creating database objects for {0}", DatabaseName));
 			// create db objects
 
 			// resolve dependencies by trying over and over
