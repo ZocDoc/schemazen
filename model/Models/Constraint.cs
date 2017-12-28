@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 
 namespace SchemaZen.Library.Models {
@@ -41,7 +42,7 @@ namespace SchemaZen.Library.Models {
 		public string ScriptCreate() {
 			if (Type == "CHECK") {
 				var notForReplicationOption = IsNotForReplication ? "NOT FOR REPLICATION" : "";
-				return $"CONSTRAINT [{Name}] CHECK {notForReplicationOption} {CheckConstraintExpression}";
+				return string.Format("CONSTRAINT [{0}] CHECK {1} {2}", Name, notForReplicationOption, CheckConstraintExpression);
 			}
 
 			if (Type == "INDEX") {
