@@ -242,7 +242,9 @@ end
 						var row = dt.NewRow();
 						var fields = (new String(line.ToArray())).Split(new[] { fieldSeparator }, StringSplitOptions.None);
 						if (fields.Length != dt.Columns.Count) {
-							throw new DataFileException("Incorrect number of columns", filename, linenumber);
+							var columnNames = dt.Columns.OfType<DataColumn>().Select(c => $" * {c.ColumnName} ({c.DataType})").ToArray();
+							var details = $"fields.Length: {fields.Length}, Columns.Count: {dt.Columns.Count}, Column Names:{Environment.NewLine}{string.Join(Environment.NewLine, columnNames)}";
+							throw new DataFileException($"Incorrect number of columns, {details}", filename, linenumber);
 						}
 						for (var j = 0; j < fields.Length; j++) {
 							try {
